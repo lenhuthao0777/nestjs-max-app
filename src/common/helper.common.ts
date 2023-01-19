@@ -23,10 +23,10 @@ export const HandleResponse = (code?: number, message?: string, data?: any) => {
       };
 
     case HttpStatus.UNAUTHORIZED:
-      throw new BadRequestException(message);
+      throw new UnauthorizedException(message);
 
     case HttpStatus.BAD_REQUEST:
-      throw new UnauthorizedException(message);
+      throw new BadRequestException(message);
 
     default:
       break;

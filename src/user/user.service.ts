@@ -1,5 +1,6 @@
-import { Injectable } from '@nestjs/common';
+import { HttpStatus, Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
+import { HandleResponse } from '@src/common/helper.common';
 import { Model } from 'mongoose';
 import { User } from './schema/user.schema';
 
@@ -9,6 +10,6 @@ export class UserService {
 
   async users() {
     const data = await this.UserModel.find();
-    return data;
+    return HandleResponse(HttpStatus.OK, 'Success!', data);
   }
 }

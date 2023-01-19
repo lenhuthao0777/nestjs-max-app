@@ -28,8 +28,8 @@ export class AuthController {
     return this.authService.login(user);
   }
 
-  @Get()
-  get() {
-    return 'get';
+  @Post('/me')
+  me(@Body() email: string) {
+    return this.authService.me(email);
   }
 }

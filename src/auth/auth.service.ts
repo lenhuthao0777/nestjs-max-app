@@ -1,7 +1,7 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { HandleResponse } from '@src/common/helper.common';
-import { hash } from 'bcryptjs';
+import { compare, hash } from 'bcryptjs';
 import { Model } from 'mongoose';
 import { User } from 'src/user/schema/user.schema';
 import { AuthLoginDto } from './dto/login-auth.dto';
@@ -15,6 +15,12 @@ export class AuthService {
     const numSaltRounds = 10;
 
     const hashPass: string = await hash(user.password, numSaltRounds);
+
+    const checkUser: User = await this.UserModel.findOne({ email: user.email });
+
+    if (checkUser) {
+      return HandleResponse(HttpStatus.BAD_REQUEST, 'Email already exist');
+    }
 
     const registerFc = new this.UserModel({ ...user, password: hashPass });
 
@@ -30,22 +36,40 @@ export class AuthService {
   }
 
   async login(user: AuthLoginDto) {
-    const checkUser: User = await this.UserModel.findOne({ email: user.email });
+    const checkUser: User = await this.UserModel.findOne({
+      where: {
+        email: user.email,
+      },
+    });
+
     if (!checkUser) {
       return HandleResponse(
         HttpStatus.BAD_REQUEST,
         'Email or password is incorrect!',
       );
     }
+    const checkPass = await compare(user.password, checkUser.password);
 
-    const data = {
-      name: checkUser.name,
-      email: checkUser.email,
-      role: 1,
-      token: 'this is the token :))',
-      refresh_token: 'this is the refresh token :))',
-    };
+    if (checkUser && checkPass) {
+      const data = {
+        name: checkUser.name,
+        email: checkUser.email,
+        role: 1,
+        token: 'this is the token :))',
+        refresh_token: 'this is the refresh token :))',
+      };
 
-    return HandleResponse(HttpStatus.OK, 'Login Success!', data);
+      return HandleResponse(HttpStatus.OK, 'Login Success!', data);
+    }
+  }
+
+  async me(email: string) {
+    const me: User = await this.UserModel.findOne({ where: { email } });
+
+    if (!me) {
+      return HandleResponse(HttpStatus.UNAUTHORIZED);
+    }
+
+    return HandleResponse(HttpStatus.OK, 'Success!', me);
   }
 }
