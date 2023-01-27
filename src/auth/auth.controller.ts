@@ -8,10 +8,12 @@ import {
   Delete,
   HttpStatus,
   HttpCode,
+  UseGuards,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { AuthLoginDto } from './dto/login-auth.dto';
 import { RegisterUserDto } from './dto/register-auth.dto';
+import { AuthenticatedGuard } from './auth.guard';
 
 @Controller('auth')
 export class AuthController {
@@ -31,5 +33,11 @@ export class AuthController {
   @Post('/me')
   me(@Body() email: string) {
     return this.authService.me(email);
+  }
+
+  @UseGuards(AuthenticatedGuard)
+  @Get('/test/:id')
+  test() {
+    return 'test';
   }
 }

@@ -10,6 +10,14 @@ export class UserService {
 
   async users() {
     const data = await this.UserModel.find();
-    return HandleResponse(HttpStatus.OK, 'Success!', data);
+
+    const dataResponse = data.map((item) => ({
+      id: item._id,
+      name: item.name,
+      email: item.email,
+      create_at: item.create_at,
+      update_at: item.update_at,
+    }));
+    return HandleResponse(HttpStatus.OK, 'Success!', dataResponse);
   }
 }
