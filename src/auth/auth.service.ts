@@ -1,4 +1,5 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
 import { InjectModel } from '@nestjs/mongoose';
 import { HandleResponse } from '@src/common/helper.common';
 import { compare, hash } from 'bcryptjs';
@@ -9,7 +10,10 @@ import { RegisterUserDto } from './dto/register-auth.dto';
 
 @Injectable()
 export class AuthService {
-  constructor(@InjectModel('User') private readonly UserModel: Model<User>) {}
+  constructor(
+    @InjectModel('User') private readonly UserModel: Model<User>,
+    private jwtService: JwtService,
+  ) {}
 
   async register(user: RegisterUserDto): Promise<any> {
     const numSaltRounds = 10;
@@ -51,12 +55,18 @@ export class AuthService {
     const checkPass = await compare(user.password, checkUser.password);
 
     if (checkUser && checkPass) {
+      const payload = {
+        email: checkUser.email,
+        name: checkUser.name,
+        role: checkUser.role_id,
+      };
+
       const data = {
         name: checkUser.name,
         email: checkUser.email,
         role: 1,
-        token: 'this is the token :))',
-        refresh_token: 'this is the refresh token :))',
+        token: await this.jwtService.signAsync(payload),
+        refresh_token: '',
       };
 
       return HandleResponse(HttpStatus.OK, 'Login Success!', data);
@@ -71,5 +81,21 @@ export class AuthService {
     }
 
     return HandleResponse(HttpStatus.OK, 'Success!', me);
+  }
+
+  async validateUser(email: string, password: string): Promise<any> {
+    const user: User = await this.UserModel.findOne({
+      where: {
+        email,
+      },
+    });
+
+    const checkPass = await compare(password, user.password);
+
+    if (user && checkPass) {
+      const { password, ...result } = user;
+      return result;
+    }
+    return null;
   }
 }
