@@ -5,8 +5,11 @@ export class User {
   @Prop({ required: [true, 'name is not empty!'] })
   name: string;
 
-  @Prop({ required: [true, 'name is not empty!'], unique: true })
+  @Prop({ required: [true, 'email is not empty!'], unique: true })
   email: string;
+
+  @Prop({ default: '' })
+  refresh_token?: string;
 
   @Prop()
   phone!: string;

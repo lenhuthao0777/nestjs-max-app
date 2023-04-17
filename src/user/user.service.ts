@@ -20,4 +20,10 @@ export class UserService {
     }));
     return HandleResponse(HttpStatus.OK, 'Success!', dataResponse);
   }
+
+  async user(id: string) {
+    const data = await this.UserModel.findById(id);
+
+    return HandleResponse(HttpStatus.OK, 'Success!', data);
+  }
 }

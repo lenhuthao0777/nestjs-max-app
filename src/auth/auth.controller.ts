@@ -1,8 +1,9 @@
-import { Controller, Get, Post, Body, UseGuards } from '@nestjs/common';
+import { Controller, Post, Body, UseGuards } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { AuthLoginDto } from './dto/login-auth.dto';
 import { RegisterUserDto } from './dto/register-auth.dto';
 import { JwtAuthGuard } from './jwt-auth.guard';
+import { MeType } from './dto/me.auth.dto';
 
 @Controller('auth')
 export class AuthController {
@@ -20,13 +21,7 @@ export class AuthController {
 
   @UseGuards(JwtAuthGuard)
   @Post('/me')
-  me(@Body() email: string) {
-    return this.authService.me(email);
-  }
-
-  @UseGuards(JwtAuthGuard)
-  @Get('/test/:id')
-  test() {
-    return 'test';
+  me(@Body() user: MeType) {
+    return this.authService.me(user);
   }
 }

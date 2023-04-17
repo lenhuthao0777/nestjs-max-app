@@ -7,6 +7,13 @@ import { Model } from 'mongoose';
 import { User } from 'src/user/schema/user.schema';
 import { AuthLoginDto } from './dto/login-auth.dto';
 import { RegisterUserDto } from './dto/register-auth.dto';
+import { MeType } from './dto/me.auth.dto';
+
+type TToken = {
+  email: string;
+  name: string;
+  role: number;
+};
 
 @Injectable()
 export class AuthService {
@@ -16,35 +23,47 @@ export class AuthService {
   ) {}
 
   async register(user: RegisterUserDto): Promise<any> {
-    const numSaltRounds = 10;
+    try {
+      const numSaltRounds = 10;
 
-    const hashPass: string = await hash(user.password, numSaltRounds);
+      const hashPass: string = await hash(user.password, numSaltRounds);
 
-    const checkUser: User = await this.UserModel.findOne({ email: user.email });
+      const checkUser: User = await this.UserModel.findOne({
+        email: user.email,
+      });
 
-    if (checkUser) {
-      return HandleResponse(HttpStatus.BAD_REQUEST, 'Email already exist');
+      if (checkUser) {
+        return HandleResponse(HttpStatus.BAD_REQUEST, 'Email already exist');
+      }
+
+      // const token: string = await this.createToken({
+      //   email: user.email,
+      //   name: user.name,
+      //   role: 1,
+      // });
+
+      const registerFc = new this.UserModel({
+        ...user,
+        password: hashPass,
+      });
+
+      const data: User = await registerFc.save();
+
+      return HandleResponse(HttpStatus.OK, 'Register success!', {
+        name: data.name,
+        email: data.email,
+        phone: data.phone,
+        // access_token: token,
+        create_at: data.create_at,
+        update_at: data.update_at,
+      });
+    } catch (error) {
+      return error.message;
     }
-
-    const registerFc = new this.UserModel({ ...user, password: hashPass });
-
-    const data: User = await registerFc.save();
-
-    return HandleResponse(HttpStatus.OK, 'Register success!', {
-      name: data.name,
-      email: data.email,
-      phone: data.phone,
-      create_at: data.create_at,
-      update_at: data.update_at,
-    });
   }
 
   async login(user: AuthLoginDto) {
-    const checkUser: User = await this.UserModel.findOne({
-      where: {
-        email: user.email,
-      },
-    });
+    const checkUser: User = await this.validateUser(user.email, user.password);
 
     if (!checkUser) {
       return HandleResponse(
@@ -52,50 +71,83 @@ export class AuthService {
         'Email or password is incorrect!',
       );
     }
-    const checkPass = await compare(user.password, checkUser.password);
 
-    if (checkUser && checkPass) {
-      const payload = {
+    if (checkUser) {
+      const payload: TToken = {
         email: checkUser.email,
         name: checkUser.name,
-        role: checkUser.role_id,
+        role: 1,
       };
 
       const data = {
         name: checkUser.name,
         email: checkUser.email,
         role: 1,
-        token: await this.jwtService.signAsync(payload),
-        refresh_token: '',
+        token: await this.createToken(payload, true),
+        refresh_token: checkUser.refresh_token,
       };
 
       return HandleResponse(HttpStatus.OK, 'Login Success!', data);
     }
   }
 
-  async me(email: string) {
-    const me: User = await this.UserModel.findOne({ where: { email } });
+  async me(user: MeType) {
+    try {
+      const me: User = await this.UserModel.findOne({
+        email: user.email,
+      }).exec();
 
-    if (!me) {
-      return HandleResponse(HttpStatus.UNAUTHORIZED);
+      if (!me) {
+        return HandleResponse(HttpStatus.UNAUTHORIZED);
+      }
+
+      return HandleResponse(HttpStatus.OK, 'Success!', me);
+    } catch (error) {
+      return error;
     }
-
-    return HandleResponse(HttpStatus.OK, 'Success!', me);
   }
 
   async validateUser(email: string, password: string): Promise<any> {
     const user: User = await this.UserModel.findOne({
-      where: {
-        email,
-      },
-    });
+      email,
+    }).exec();
 
     const checkPass = await compare(password, user.password);
 
     if (user && checkPass) {
-      const { password, ...result } = user;
-      return result;
+      return user;
     }
     return null;
+  }
+
+  private async createToken(user: TToken, isLogin?: boolean) {
+    const accessToken: string = await this.jwtService.sign(user);
+
+    if (isLogin) {
+      const refreshToken: string = await this.jwtService.sign(
+        { user },
+        {
+          secret: process.env.SECRET,
+          expiresIn: process.env.EXPIRESIN,
+        },
+      );
+
+      const user1 = await this.UserModel.findOne({
+        email: user.email,
+      });
+
+      console.log(refreshToken);
+
+      console.log('user', user1);
+
+      // await this.UserModel.findOneAndUpdate(
+      //   {
+      //     email: user.email,
+      //   },
+      //   { refresh_token: refreshToken },
+      // );
+    }
+
+    return accessToken;
   }
 }
